@@ -135,13 +135,17 @@ export default function Index() {
   if (!state.imageUrl) {
     return (
       <View className="upload-page">
-        <Text className="upload-title">🎨 PaletteCard</Text>
-        <Text className="upload-desc">
-          上传一张照片，提取主色调，生成好看的分享卡片
-        </Text>
-        <View className="upload-btn" onTap={handleChooseImage}>
-          <Text className="upload-btn-text">选择照片</Text>
+        <View className="upload-header">
+          <Text className="upload-title">🎨 PaletteCard</Text>
+          <Text className="upload-desc">
+            上传照片，提取主色调{'\n'}生成好看的分享卡片
+          </Text>
         </View>
+
+        <View className="upload-fab" onTap={handleChooseImage}>
+          <Text className="upload-fab-icon">+</Text>
+        </View>
+
         <Text className="upload-hint">
           🔒 照片仅在你的设备上处理，不上传服务器
         </Text>
