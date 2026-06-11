@@ -3,7 +3,7 @@ import Taro from '@tarojs/taro'
 import { useMemo } from 'react'
 import type { AspectRatio } from '../../types/editor'
 
-const CARD_HORIZONTAL_PADDING = 48 // 左右各 24px
+import { CARD_HORIZONTAL_PADDING } from '../../utils/cardLayout'
 
 const ASPECT_HEIGHT_RATIO: Record<AspectRatio, number> = {
   '1:1': 1,

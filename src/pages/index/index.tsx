@@ -114,6 +114,7 @@ export default function Index() {
         text: state.text,
         aspectRatio: state.aspectRatio,
         transform: state.imageTransform,
+        previewWidth: cardWidth,
       })
       setExportStatus('success')
       Taro.showToast({ title: '已保存到相册', icon: 'success' })

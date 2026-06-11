@@ -8,7 +8,7 @@ const ASPECT_RATIO_DIMENSIONS: Record<AspectRatio, { width: number; height: numb
 
 /**
  * 返回各模板中图片区域的宽高比（用于颜色提取时的 canvas 裁剪）
- * Classic: 图片占卡片约 70% 高度
+ * Classic: 图片占卡片 50% 高度
  * Vibe (music): 图片为正方形 inset，aspect = 1
  * Poster: 全出血，与卡片同比例
  */
@@ -21,7 +21,7 @@ export function getCardImageAspect(
 
   switch (templateId) {
     case 'classic':
-      return cardAspect / 0.7
+      return cardAspect / 0.5
     case 'music':
       return 1
     case 'poster':

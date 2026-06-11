@@ -1,6 +1,8 @@
 import { View, Text } from '@tarojs/components'
 import { ZoomableImage } from '../ZoomableImage'
 import { getContrastText } from '../../utils/colorUtils'
+import { buildLocationLine, formatDisplayTime } from '../../utils/cardText'
+import { PREVIEW_LAYOUT } from '../../utils/cardLayout'
 import type { PaletteColor, TextContent, ImageTransform } from '../../types/editor'
 
 interface Props {
@@ -11,18 +13,6 @@ interface Props {
   onTransformChange?: (t: ImageTransform) => void
 }
 
-function formatDisplayTime(dateStr: string): string {
-  const d = dateStr ? new Date(dateStr.includes('T') ? dateStr : `${dateStr}T12:00:00`) : new Date()
-  if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-}
-
-function buildLocationLine(text: TextContent): string {
-  const location = text.location.trim()
-  if (location) return location
-  return [text.title, text.subtitle].filter(v => v.trim()).join(' • ')
-}
-
 export function CardLayoutShell({
   imageUrl,
   palette,
@@ -30,7 +20,7 @@ export function CardLayoutShell({
   transform,
   onTransformChange,
 }: Props) {
-  const bgColor = palette[0]?.hex ?? '#8b9cb3'
+  const bgColor = palette[0]?.hex ?? PREVIEW_LAYOUT.classic.defaultBg
   const textColor = getContrastText(bgColor)
   const locationLine = buildLocationLine(text)
   const timeLine = formatDisplayTime(text.date)

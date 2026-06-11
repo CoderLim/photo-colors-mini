@@ -1,5 +1,6 @@
 import { View, Text } from '@tarojs/components'
 import { ZoomableImage } from '../ZoomableImage'
+import { buildMetaLine } from '../../utils/cardText'
 import type { PaletteColor, TextContent, AspectRatio, ImageTransform } from '../../types/editor'
 
 interface Props {
@@ -18,7 +19,7 @@ export function PosterCardPreview({
   transform,
   onTransformChange,
 }: Props) {
-  const meta = [text.location, text.date].filter(Boolean).join(' · ')
+  const meta = buildMetaLine(text)
 
   return (
     <View className="poster-card">

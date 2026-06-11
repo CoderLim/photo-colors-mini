@@ -1,6 +1,8 @@
 import { View, Text, Image } from '@tarojs/components'
 import { ZoomableImage } from '../ZoomableImage'
 import { ColorSwatch } from '../palette/ColorSwatch'
+import { buildMetaLine } from '../../utils/cardText'
+import { PREVIEW_LAYOUT } from '../../utils/cardLayout'
 import type { PaletteColor, TextContent, AspectRatio, ImageTransform } from '../../types/editor'
 
 interface Props {
@@ -19,8 +21,8 @@ export function VibeCardPreview({
   transform,
   onTransformChange,
 }: Props) {
-  const dominantHex = palette[0]?.hex ?? '#1a1a2e'
-  const meta = [text.location, text.date].filter(Boolean).join(' · ')
+  const dominantHex = palette[0]?.hex ?? PREVIEW_LAYOUT.vibe.defaultBg
+  const meta = buildMetaLine(text)
 
   return (
     <View className="vibe-card" style={{ backgroundColor: dominantHex }}>
