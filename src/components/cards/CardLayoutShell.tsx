@@ -1,6 +1,5 @@
 import { View, Text } from '@tarojs/components'
 import { ZoomableImage } from '../ZoomableImage'
-import { ColorSwatch } from '../palette/ColorSwatch'
 import { getContrastText } from '../../utils/colorUtils'
 import type { PaletteColor, TextContent, ImageTransform } from '../../types/editor'
 
@@ -58,11 +57,6 @@ export function CardLayoutShell({
             {timeLine}
           </Text>
         ) : null}
-        {palette.length > 0 && (
-          <View className="card-layout__swatches">
-            <ColorSwatch colors={palette} size="sm" />
-          </View>
-        )}
       </View>
       <View className="card-layout__photo">
         <View className="card-layout__photo-inner">

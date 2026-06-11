@@ -183,19 +183,19 @@
 }
 
 .card-layout__meta-primary {
-  font-size: 33px;
+  font-size: 22px;
   font-weight: 600;
-  letter-spacing: 6px;
+  letter-spacing: 4px;
   text-transform: uppercase;
   text-align: center;
   line-height: 1.4;
 }
 
 .card-layout__meta-secondary {
-  font-size: 39px;
+  font-size: 26px;
   font-weight: 400;
   text-align: center;
-  letter-spacing: 0.9px;
+  letter-spacing: 0.6px;
 }
 
 .card-layout__photo {
@@ -228,10 +228,6 @@
 
 .card-layout__palette-segment {
   flex: 1;
-}
-
-.card-layout__swatches {
-  margin-top: 8px;
 }
 
 /* ─── Vibe Card ──────────────────────────────────────────── */

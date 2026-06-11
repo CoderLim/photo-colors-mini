@@ -90,35 +90,23 @@ async function exportClassic(options: ExportOptions): Promise<string> {
   const px = 60
   let ty = photoH + 48
   ctx.fillStyle = textColor
-  ctx.font = '700 48px Arial'
+  ctx.font = '700 32px Arial'
   ctx.fillText(options.text.title || 'My Photo', px, ty)
-  ty += 60
+  ty += 40
   if (options.text.subtitle) {
     ctx.globalAlpha = 0.7
-    ctx.font = '400 28px Arial'
+    ctx.font = '400 19px Arial'
     ctx.fillText(options.text.subtitle, px, ty)
-    ty += 40
+    ty += 27
     ctx.globalAlpha = 1
   }
 
   const meta = buildMetaLine(options.text)
   if (meta) {
     ctx.globalAlpha = 0.5
-    ctx.font = '400 22px Arial'
+    ctx.font = '400 15px Arial'
     ctx.fillText(meta, px, ty)
     ctx.globalAlpha = 1
-  }
-
-  if (options.palette.length > 0) {
-    const swatchY = h - 48 - 34
-    let sx = px
-    options.palette.slice(0, 5).forEach(c => {
-      ctx.fillStyle = c.hex
-      ctx.beginPath()
-      ctx.arc(sx + 17, swatchY + 17, 17, 0, Math.PI * 2)
-      ctx.fill()
-      sx += 17 * 2 + 18
-    })
   }
 
   return canvasToTempFile(canvas)
