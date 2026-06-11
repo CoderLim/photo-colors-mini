@@ -11,5 +11,5 @@ interface Props {
 }
 
 export function ClassicCardPreview(props: Props) {
-  return <CardLayoutShell {...props} variant="classic" />
+  return <CardLayoutShell {...props} />
 }

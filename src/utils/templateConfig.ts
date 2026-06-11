@@ -8,10 +8,25 @@ const ASPECT_RATIO_DIMENSIONS: Record<AspectRatio, { width: number; height: numb
 
 /**
  * 返回各模板中图片区域的宽高比（用于颜色提取时的 canvas 裁剪）
- * 统一布局：metadata 占上半 ~50%，照片占下半 ~50%
+ * Classic: 图片占卡片约 70% 高度
+ * Vibe (music): 图片为正方形 inset，aspect = 1
+ * Poster: 全出血，与卡片同比例
  */
-export function getCardImageAspect(_templateId: TemplateId, aspectRatio: AspectRatio): number {
+export function getCardImageAspect(
+  templateId: TemplateId,
+  aspectRatio: AspectRatio
+): number {
   const { width, height } = ASPECT_RATIO_DIMENSIONS[aspectRatio]
   const cardAspect = width / height
-  return cardAspect / 0.5
+
+  switch (templateId) {
+    case 'classic':
+      return cardAspect / 0.7
+    case 'music':
+      return 1
+    case 'poster':
+      return cardAspect
+    default:
+      return cardAspect
+  }
 }

@@ -1,7 +1,8 @@
 import { View, Text } from '@tarojs/components'
 import { ZoomableImage } from '../ZoomableImage'
+import { ColorSwatch } from '../palette/ColorSwatch'
 import { getContrastText } from '../../utils/colorUtils'
-import type { PaletteColor, TextContent, ImageTransform, TemplateId } from '../../types/editor'
+import type { PaletteColor, TextContent, ImageTransform } from '../../types/editor'
 
 interface Props {
   imageUrl: string
@@ -9,7 +10,6 @@ interface Props {
   text: TextContent
   transform: ImageTransform
   onTransformChange?: (t: ImageTransform) => void
-  variant: TemplateId
 }
 
 function formatDisplayTime(dateStr: string): string {
@@ -30,7 +30,6 @@ export function CardLayoutShell({
   text,
   transform,
   onTransformChange,
-  variant,
 }: Props) {
   const bgColor = palette[0]?.hex ?? '#8b9cb3'
   const textColor = getContrastText(bgColor)
@@ -38,13 +37,10 @@ export function CardLayoutShell({
   const timeLine = formatDisplayTime(text.date)
 
   return (
-    <View className="card-layout">
+    <View className="card-layout card-layout--classic">
       <View
         className="card-layout__meta"
-        style={{
-          backgroundColor: bgColor,
-          ...(variant === 'music' ? { opacity: 0.95 } : {}),
-        }}
+        style={{ backgroundColor: bgColor }}
       >
         {locationLine ? (
           <Text
@@ -62,6 +58,11 @@ export function CardLayoutShell({
             {timeLine}
           </Text>
         ) : null}
+        {palette.length > 0 && (
+          <View className="card-layout__swatches">
+            <ColorSwatch colors={palette} size="sm" />
+          </View>
+        )}
       </View>
       <View className="card-layout__photo">
         <View className="card-layout__photo-inner">
@@ -71,17 +72,6 @@ export function CardLayoutShell({
             onTransformChange={onTransformChange}
           />
         </View>
-        {variant === 'poster' && palette.length > 0 && (
-          <View className="card-layout__palette-bar">
-            {palette.map(c => (
-              <View
-                key={c.hex}
-                className="card-layout__palette-segment"
-                style={{ backgroundColor: c.hex }}
-              />
-            ))}
-          </View>
-        )}
       </View>
     </View>
   )

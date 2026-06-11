@@ -16,7 +16,7 @@ export function AspectRatioSelector({ selected, onChange }: Props) {
         {RATIOS.map(r => (
           <View
             key={r}
-            onClick={() => onChange(r)}
+            onTap={() => onChange(r)}
             style={{
               flex: 1, padding: '8px 0', textAlign: 'center', borderRadius: 8,
               backgroundColor: selected === r ? '#6d28d9' : '#f3f4f6',

@@ -10,7 +10,7 @@ import { ClassicCardPreview } from '../../components/cards/ClassicCardPreview'
 import { VibeCardPreview } from '../../components/cards/VibeCardPreview'
 import { PosterCardPreview } from '../../components/cards/PosterCardPreview'
 import { SettingsDrawer } from '../../components/editor/SettingsDrawer'
-import { EditorHeader, useCardDimensions } from '../../components/editor/EditorHeader'
+import { EditorHeader, EditorToolbar, useCardDimensions } from '../../components/editor/EditorHeader'
 import './index.scss'
 
 export default function Index() {
@@ -159,12 +159,7 @@ export default function Index() {
       className="editor-page"
       style={{ backgroundColor: pageBgColor }}
     >
-      <EditorHeader
-        onChooseImage={handleChooseImage}
-        onSave={handleSave}
-        onSettings={() => setDrawerVisible(true)}
-        isSaving={state.exportStatus === 'exporting'}
-      />
+      <EditorHeader />
       <View className="preview-area">
         {state.isExtractingPalette && (
           <View className="extracting-badge">
@@ -176,6 +171,7 @@ export default function Index() {
           style={{ width: `${cardWidth}px`, height: `${cardHeight}px` }}
         >
           <CardComponent
+            key={state.templateId}
             imageUrl={state.imageUrl}
             palette={state.palette}
             text={state.text}
@@ -185,6 +181,13 @@ export default function Index() {
           />
         </View>
       </View>
+
+      <EditorToolbar
+        onChooseImage={handleChooseImage}
+        onSave={handleSave}
+        onSettings={() => setDrawerVisible(true)}
+        isSaving={state.exportStatus === 'exporting'}
+      />
 
       <SettingsDrawer
         visible={drawerVisible}

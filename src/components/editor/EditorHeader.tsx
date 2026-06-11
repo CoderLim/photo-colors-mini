@@ -11,13 +11,6 @@ const ASPECT_HEIGHT_RATIO: Record<AspectRatio, number> = {
   '9:16': 16 / 9,
 }
 
-interface Props {
-  onChooseImage: () => void
-  onSave: () => void
-  onSettings: () => void
-  isSaving?: boolean
-}
-
 export function useEditorLayout() {
   return useMemo(() => {
     const win = Taro.getWindowInfo()
@@ -39,7 +32,7 @@ export function useCardDimensions(aspectRatio: AspectRatio) {
   }, [aspectRatio])
 }
 
-export function EditorHeader({ onChooseImage, onSave, onSettings, isSaving }: Props) {
+export function EditorHeader() {
   const { headerTop, headerPaddingRight } = useEditorLayout()
 
   return (
@@ -50,20 +43,34 @@ export function EditorHeader({ onChooseImage, onSave, onSettings, isSaving }: Pr
         paddingRight: `${headerPaddingRight}px`,
       }}
     >
-      <Text className="editor-header-title">PhotoColors</Text>
-      <View className="editor-header-actions">
-        <View className="editor-header-btn" onTap={onChooseImage}>
-          <Text className="editor-header-btn-icon">+</Text>
+      <Text className="editor-header-title">ColorWalk</Text>
+    </View>
+  )
+}
+
+interface ToolbarProps {
+  onChooseImage: () => void
+  onSave: () => void
+  onSettings: () => void
+  isSaving?: boolean
+}
+
+export function EditorToolbar({ onChooseImage, onSave, onSettings, isSaving }: ToolbarProps) {
+  return (
+    <View className="editor-toolbar">
+      <View className="editor-toolbar-actions">
+        <View className="editor-toolbar-btn" onTap={onChooseImage}>
+          <Text className="editor-toolbar-btn-icon">+</Text>
         </View>
         <View
-          className="editor-header-btn"
+          className="editor-toolbar-btn"
           onTap={isSaving ? undefined : onSave}
           style={{ opacity: isSaving ? 0.4 : 1 }}
         >
-          <Text className="editor-header-btn-icon">↓</Text>
+          <Text className="editor-toolbar-btn-icon">↓</Text>
         </View>
-        <View className="editor-header-btn" onTap={onSettings}>
-          <Text className="editor-header-btn-icon editor-header-btn-icon--sm">⚙</Text>
+        <View className="editor-toolbar-btn" onTap={onSettings}>
+          <Text className="editor-toolbar-btn-icon editor-toolbar-btn-icon--sm">⚙</Text>
         </View>
       </View>
     </View>
