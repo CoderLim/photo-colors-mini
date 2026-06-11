@@ -59,133 +59,92 @@ function canvasToTempFile(canvas: unknown): Promise<string> {
   })
 }
 
-async function exportClassic(options: ExportOptions): Promise<string> {
+function formatDisplayTime(dateStr: string): string {
+  const d = dateStr ? new Date(dateStr.includes('T') ? dateStr : `${dateStr}T12:00:00`) : new Date()
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+}
+
+function buildLocationLine(text: TextContent): string {
+  const location = text.location.trim()
+  if (location) return location
+  return [text.title, text.subtitle].filter(v => v.trim()).join(' • ')
+}
+
+function drawRoundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, w: number, h: number, r: number
+) {
+  const radius = Math.min(r, w / 2, h / 2)
+  ctx.beginPath()
+  ctx.moveTo(x + radius, y)
+  ctx.lineTo(x + w - radius, y)
+  ctx.quadraticCurveTo(x + w, y, x + w, y + radius)
+  ctx.lineTo(x + w, y + h - radius)
+  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h)
+  ctx.lineTo(x + radius, y + h)
+  ctx.quadraticCurveTo(x, y + h, x, y + h - radius)
+  ctx.lineTo(x, y + radius)
+  ctx.quadraticCurveTo(x, y, x + radius, y)
+  ctx.closePath()
+}
+
+async function exportUnified(options: ExportOptions): Promise<string> {
   const { w, h } = DIMENSIONS[options.aspectRatio]
   const canvas = Taro.createOffscreenCanvas({ type: '2d', width: w, height: h })
   const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
   const img = await loadImage(canvas, options.imageUrl)
 
-  const photoH = Math.round(h * 0.7)
-  const infoH = h - photoH
-  const bgColor = options.palette[0]?.hex ?? '#f5f5f5'
+  const metaH = Math.round(h * 0.5)
+  const photoH = h - metaH
+  const bgColor = options.palette[0]?.hex ?? '#8b9cb3'
   const textColor = getContrastText(bgColor)
+  const cornerRadius = Math.round(w * 0.026)
 
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, w, h)
 
   ctx.save()
-  ctx.beginPath(); ctx.rect(0, 0, w, photoH); ctx.clip()
-  drawZoomedImage(ctx, img, 0, 0, w, photoH, options.transform)
-  ctx.restore()
+  drawRoundedRect(ctx, 0, 0, w, h, cornerRadius)
+  ctx.clip()
 
   ctx.fillStyle = bgColor
-  ctx.fillRect(0, photoH, w, infoH)
+  ctx.fillRect(0, 0, w, metaH)
 
-  const px = 60
-  let y = photoH + 48
+  const locationLine = buildLocationLine(options.text)
+  const timeLine = formatDisplayTime(options.text.date)
+
+  ctx.textAlign = 'center'
   ctx.fillStyle = textColor
-  ctx.font = '700 48px Arial'
-  ctx.fillText(options.text.title || 'My Photo', px, y)
-  y += 60
-  if (options.text.subtitle) {
-    ctx.globalAlpha = 0.7
-    ctx.font = '400 28px Arial'
-    ctx.fillText(options.text.subtitle, px, y)
+
+  if (locationLine) {
+    ctx.font = '600 36px Arial'
+    ctx.fillText(locationLine.toUpperCase(), w / 2, metaH / 2 - (timeLine ? 24 : 0))
+  }
+  if (timeLine) {
+    ctx.globalAlpha = 0.85
+    ctx.font = '400 32px Arial'
+    ctx.fillText(timeLine, w / 2, metaH / 2 + (locationLine ? 36 : 0))
     ctx.globalAlpha = 1
   }
 
-  if (options.palette.length > 0) {
-    const swatchY = h - 48 - 34
-    let sx = px
-    options.palette.slice(0, 5).forEach(c => {
-      ctx.fillStyle = c.hex
-      ctx.beginPath(); ctx.arc(sx + 17, swatchY + 17, 17, 0, Math.PI * 2); ctx.fill()
-      sx += 17 * 2 + 18
-    })
-  }
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(0, metaH, w, photoH)
+  ctx.clip()
+  drawZoomedImage(ctx, img, 0, metaH, w, photoH, options.transform)
+  ctx.restore()
 
-  return canvasToTempFile(canvas)
-}
-
-async function exportPoster(options: ExportOptions): Promise<string> {
-  const { w, h } = DIMENSIONS[options.aspectRatio]
-  const canvas = Taro.createOffscreenCanvas({ type: '2d', width: w, height: h })
-  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
-  const img = await loadImage(canvas, options.imageUrl)
-
-  drawZoomedImage(ctx, img, 0, 0, w, h, options.transform)
-
-  const grad = ctx.createLinearGradient(0, h * 0.5, 0, h)
-  grad.addColorStop(0, 'rgba(0,0,0,0)')
-  grad.addColorStop(1, 'rgba(0,0,0,0.75)')
-  ctx.fillStyle = grad
-  ctx.fillRect(0, 0, w, h)
-
-  if (options.palette.length > 0) {
+  if (options.templateId === 'poster' && options.palette.length > 0) {
     const barH = 16
     const bW = w / options.palette.length
     options.palette.forEach((c, i) => {
-      ctx.fillStyle = c.hex; ctx.fillRect(i * bW, h - barH, bW, barH)
-    })
-  }
-
-  ctx.textAlign = 'right'
-  ctx.fillStyle = '#ffffff'
-  ctx.font = '700 72px Arial'
-  ctx.fillText(options.text.title || 'My Photo', w - 60, h - 96)
-  if (options.text.subtitle) {
-    ctx.globalAlpha = 0.8; ctx.font = '400 36px Arial'
-    ctx.fillText(options.text.subtitle, w - 60, h - 40)
-    ctx.globalAlpha = 1
-  }
-
-  return canvasToTempFile(canvas)
-}
-
-async function exportVibe(options: ExportOptions): Promise<string> {
-  const { w, h } = DIMENSIONS[options.aspectRatio]
-  const canvas = Taro.createOffscreenCanvas({ type: '2d', width: w, height: h })
-  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
-  const img = await loadImage(canvas, options.imageUrl)
-
-  const dominantHex = options.palette[0]?.hex ?? '#1a1a2e'
-
-  ctx.fillStyle = dominantHex; ctx.fillRect(0, 0, w, h)
-
-  ctx.globalAlpha = 0.7
-  ctx.filter = 'blur(20px)'
-  ctx.drawImage(img, -w * 0.1, -h * 0.1, w * 1.2, h * 1.2)
-  ctx.filter = 'none'
-  ctx.globalAlpha = 1
-
-  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, 0, w, h)
-
-  const imgSize = Math.round(w * 0.75)
-  const imgX = (w - imgSize) / 2
-  const imgY = Math.round(h * 0.12)
-  ctx.save()
-  ctx.beginPath(); ctx.rect(imgX, imgY, imgSize, imgSize); ctx.clip()
-  drawZoomedImage(ctx, img, imgX, imgY, imgSize, imgSize, options.transform)
-  ctx.restore()
-
-  ctx.textAlign = 'center'
-  let ty = imgY + imgSize + 60
-  ctx.fillStyle = '#ffffff'; ctx.font = '700 52px Arial'
-  ctx.fillText(options.text.title || 'My Photo', w / 2, ty); ty += 64
-  if (options.text.subtitle) {
-    ctx.globalAlpha = 0.8; ctx.font = '400 32px Arial'
-    ctx.fillText(options.text.subtitle, w / 2, ty); ty += 48; ctx.globalAlpha = 1
-  }
-
-  if (options.palette.length > 0) {
-    let sx = (w - (options.palette.length * 52 - 16)) / 2
-    options.palette.slice(0, 5).forEach(c => {
       ctx.fillStyle = c.hex
-      ctx.beginPath(); ctx.arc(sx + 18, ty + 18, 18, 0, Math.PI * 2); ctx.fill()
-      ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 2; ctx.stroke()
-      sx += 52
+      ctx.fillRect(i * bW, metaH + photoH - barH, bW, barH)
     })
   }
+
+  ctx.restore()
 
   return canvasToTempFile(canvas)
 }
@@ -194,14 +153,6 @@ async function exportVibe(options: ExportOptions): Promise<string> {
  * 根据模板导出卡片并保存到相册
  */
 export async function exportAndSave(options: ExportOptions): Promise<void> {
-  let tempFilePath: string
-  if (options.templateId === 'classic') {
-    tempFilePath = await exportClassic(options)
-  } else if (options.templateId === 'poster') {
-    tempFilePath = await exportPoster(options)
-  } else {
-    tempFilePath = await exportVibe(options)
-  }
-
+  const tempFilePath = await exportUnified(options)
   await Taro.saveImageToPhotosAlbum({ filePath: tempFilePath })
 }

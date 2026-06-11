@@ -5,22 +5,20 @@ import { useEditorState } from '../../hooks/useEditorState'
 import { extractPaletteFromRegion } from '../../utils/extractPalette'
 import { exportAndSave } from '../../utils/canvasExport'
 import { getCardImageAspect } from '../../utils/templateConfig'
+import { lightenColor } from '../../utils/colorUtils'
 import { ClassicCardPreview } from '../../components/cards/ClassicCardPreview'
 import { VibeCardPreview } from '../../components/cards/VibeCardPreview'
 import { PosterCardPreview } from '../../components/cards/PosterCardPreview'
 import { SettingsDrawer } from '../../components/editor/SettingsDrawer'
+import { EditorHeader, useCardDimensions } from '../../components/editor/EditorHeader'
 import './index.scss'
-
-const toolbarBtnStyle: React.CSSProperties = {
-  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-  gap: 4, padding: '12px 0',
-}
 
 export default function Index() {
   const { state, setImage, setPalette, setTemplate, setAspectRatio, setText, setExportStatus, setTransform } = useEditorState()
   const [drawerVisible, setDrawerVisible] = useState(false)
   const isChoosingRef = useRef(false)
   const extractSeqRef = useRef(0)
+  const { cardWidth, cardHeight } = useCardDimensions(state.aspectRatio)
 
   const handleChooseImage = () => {
     if (isChoosingRef.current) return
@@ -153,15 +151,30 @@ export default function Index() {
     )
   }
 
+  const cardBgColor = state.palette[0]?.hex ?? '#8b9cb3'
+  const pageBgColor = lightenColor(cardBgColor, 0.15)
+
   return (
-    <View className="editor-page">
+    <View
+      className="editor-page"
+      style={{ backgroundColor: pageBgColor }}
+    >
+      <EditorHeader
+        onChooseImage={handleChooseImage}
+        onSave={handleSave}
+        onSettings={() => setDrawerVisible(true)}
+        isSaving={state.exportStatus === 'exporting'}
+      />
       <View className="preview-area">
         {state.isExtractingPalette && (
           <View className="extracting-badge">
             <Text className="extracting-text">提取颜色中…</Text>
           </View>
         )}
-        <View className="card-wrapper">
+        <View
+          className="card-wrapper"
+          style={{ width: `${cardWidth}px`, height: `${cardHeight}px` }}
+        >
           <CardComponent
             imageUrl={state.imageUrl}
             palette={state.palette}
@@ -170,30 +183,6 @@ export default function Index() {
             transform={state.imageTransform}
             onTransformChange={setTransform}
           />
-        </View>
-      </View>
-
-      <View className="toolbar">
-        <View onTap={handleChooseImage} style={toolbarBtnStyle}>
-          <Text style={{ fontSize: 22 }}>🖼️</Text>
-          <Text style={{ fontSize: 12, color: '#6b7280' }}>换图</Text>
-        </View>
-        <View className="toolbar-divider" />
-        <View onTap={() => setDrawerVisible(true)} style={toolbarBtnStyle}>
-          <Text style={{ fontSize: 22 }}>⚙️</Text>
-          <Text style={{ fontSize: 12, color: '#6b7280' }}>调整</Text>
-        </View>
-        <View className="toolbar-divider" />
-        <View
-          onTap={handleSave}
-          style={{ ...toolbarBtnStyle, opacity: state.exportStatus === 'exporting' ? 0.5 : 1 }}
-        >
-          <Text style={{ fontSize: 22 }}>
-            {state.exportStatus === 'exporting' ? '⏳' : '💾'}
-          </Text>
-          <Text style={{ fontSize: 12, color: '#6d28d9', fontWeight: 600 }}>
-            {state.exportStatus === 'exporting' ? '保存中…' : '保存'}
-          </Text>
         </View>
       </View>
 
