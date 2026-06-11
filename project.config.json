@@ -2,7 +2,7 @@
   "miniprogramRoot": "dist/",
   "projectname": "photo-colors-miniprogram",
   "description": "Photo Palette Card 微信小程序",
-  "appid": "wxf023e7a50cdcd913",
+  "appid": "wxd20cc6d616321c93",
   "setting": {
     "urlCheck": true,
     "es6": false,

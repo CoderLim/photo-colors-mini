@@ -1,6 +1,7 @@
 import { View, Image } from '@tarojs/components'
 import type { ITouchEvent } from '@tarojs/components'
-import { useRef, useCallback, useEffect } from 'react'
+import Taro, { getCurrentInstance } from '@tarojs/taro'
+import { useRef, useCallback, useEffect, useState } from 'react'
 import type { ImageTransform } from '../types/editor'
 
 interface ZoomableImageProps {
@@ -26,14 +27,29 @@ export function ZoomableImage({ src, transform, onTransformChange, style }: Zoom
   const transformRef = useRef(transform)
   const dragRef = useRef<{ startX: number; startY: number; tx: number; ty: number } | null>(null)
   const pinchRef = useRef<{ startDist: number; startScale: number } | null>(null)
+  const containerId = useRef(`zoom-img-${Date.now()}`).current
+  const sizeRef = useRef({ w: 350, h: 300 })
+  const [, setMeasured] = useState(0)
 
   useEffect(() => { transformRef.current = transform }, [transform])
 
+  useEffect(() => {
+    Taro.nextTick(() => {
+      const instance = getCurrentInstance()
+      const query = Taro.createSelectorQuery().in(instance?.page ?? instance)
+      query.select(`#${containerId}`).boundingClientRect(rect => {
+        if (rect && !Array.isArray(rect) && rect.width > 0 && rect.height > 0) {
+          sizeRef.current = { w: rect.width, h: rect.height }
+          setMeasured(n => n + 1)
+        }
+      }).exec()
+    })
+  }, [src, containerId])
+
   const applyTransform = useCallback((t: ImageTransform) => {
-    // 小程序 view 没有 offsetWidth，用固定约束值（卡片宽度约 350）
-    const W = 350, H = 620
-    const mx = maxOffset(W, t.scale)
-    const my = maxOffset(H, t.scale)
+    const { w, h } = sizeRef.current
+    const mx = maxOffset(w, t.scale)
+    const my = maxOffset(h, t.scale)
     const clamped: ImageTransform = {
       scale: t.scale,
       x: clamp(t.x, -mx, mx),
@@ -81,23 +97,30 @@ export function ZoomableImage({ src, transform, onTransformChange, style }: Zoom
   }, [])
 
   const { scale, x, y } = transform
-  const imgStyle: React.CSSProperties = {
+  const layerStyle: React.CSSProperties = {
     position: 'absolute',
-    top: 0, left: 0,
-    width: '100%', height: '100%',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
     transform: `translate(${x}px, ${y}px) scale(${scale})`,
     transformOrigin: 'center center',
+    willChange: 'transform',
   }
 
   return (
     <View
+      id={containerId}
       style={{ position: 'relative', overflow: 'hidden', width: '100%', height: '100%', ...style }}
       onTouchStart={interactive ? onTouchStart : undefined}
       onTouchMove={interactive ? onTouchMove : undefined}
       onTouchEnd={interactive ? onTouchEnd : undefined}
+      onTouchCancel={interactive ? onTouchEnd : undefined}
       catchMove={interactive}
     >
-      <Image src={src} style={imgStyle} mode="aspectFill" />
+      <View style={layerStyle}>
+        <Image src={src} style={{ width: '100%', height: '100%', display: 'block' }} mode="aspectFill" />
+      </View>
     </View>
   )
 }
