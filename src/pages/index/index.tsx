@@ -133,20 +133,19 @@ export default function Index() {
   if (!state.imageUrl) {
     return (
       <View className="upload-page">
-        <View className="upload-header">
-          <Text className="upload-title">🎨 PaletteCard</Text>
-          <Text className="upload-desc">
-            上传照片，提取主色调{'\n'}生成好看的分享卡片
-          </Text>
-        </View>
+        <View className="upload-hero">
+          <View className="upload-header">
+            <Text className="upload-title">ColorWalk</Text>
+            <Text className="upload-subtitle">发现生活的颜色</Text>
+          </View>
 
-        <View className="upload-fab" onTap={handleChooseImage}>
-          <Text className="upload-fab-icon">+</Text>
+          <View className="upload-fab" onTap={handleChooseImage}>
+          <View className="upload-fab__glass">
+            <View className="upload-fab__highlight" />
+            <Text className="upload-fab-icon">+</Text>
+          </View>
+          </View>
         </View>
-
-        <Text className="upload-hint">
-          🔒 照片仅在你的设备上处理，不上传服务器
-        </Text>
       </View>
     )
   }
