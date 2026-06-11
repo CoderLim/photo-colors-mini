@@ -41,7 +41,7 @@
     "minifyWXML": true
   },
   "compileType": "miniprogram",
-  "libVersion": "2.19.4",
+  "libVersion": "3.3.5",
   "srcMiniprogramRoot": "dist/",
   "condition": {}
 }

@@ -19,37 +19,73 @@ const toolbarBtnStyle: React.CSSProperties = {
 export default function Index() {
   const { state, setImage, setPalette, setTemplate, setAspectRatio, setText, setExportStatus, setTransform } = useEditorState()
   const [drawerVisible, setDrawerVisible] = useState(false)
+  const isChoosingRef = useRef(false)
+  const extractSeqRef = useRef(0)
 
   const handleChooseImage = () => {
+    if (isChoosingRef.current) return
+    isChoosingRef.current = true
+
     Taro.chooseMedia({
       count: 1,
       mediaType: ['image'],
       sourceType: ['album', 'camera'],
       success: res => {
-        const path = res.tempFiles[0].tempFilePath
-        setImage(path)
+        const file = res.tempFiles?.[0]
+        if (!file?.tempFilePath) {
+          Taro.showToast({ title: '未获取到图片', icon: 'none' })
+          return
+        }
+        setImage(file.tempFilePath)
+      },
+      fail: err => {
+        const cancelled = err?.errMsg?.includes('cancel')
+        if (!cancelled) {
+          Taro.showToast({ title: '选图失败，请重试', icon: 'none' })
+        }
+        console.warn('[chooseMedia] fail:', err)
+      },
+      complete: () => {
+        isChoosingRef.current = false
       },
     })
   }
 
+  // 初次选图后提取颜色
   useEffect(() => {
     if (!state.imageUrl || !state.isExtractingPalette) return
+
+    const seq = ++extractSeqRef.current
     const aspect = getCardImageAspect(state.templateId, state.aspectRatio)
+
     extractPaletteFromRegion(state.imageUrl, 5, state.imageTransform, aspect)
-      .then(setPalette)
-      .catch(() => setPalette([]))
+      .then(palette => {
+        if (seq !== extractSeqRef.current) return
+        setPalette(palette)
+      })
+      .catch(() => {
+        if (seq !== extractSeqRef.current) return
+        setPalette([])
+      })
   }, [state.imageUrl, state.isExtractingPalette, state.templateId, state.aspectRatio, setPalette])
 
+  // 缩放/拖动后 debounce 重提取
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
   useEffect(() => {
     if (!state.imageUrl || state.isExtractingPalette) return
+
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
+      const seq = ++extractSeqRef.current
       const aspect = getCardImageAspect(state.templateId, state.aspectRatio)
       extractPaletteFromRegion(state.imageUrl!, 5, state.imageTransform, aspect)
-        .then(setPalette)
+        .then(palette => {
+          if (seq !== extractSeqRef.current) return
+          setPalette(palette)
+        })
         .catch(() => {})
     }, 500)
+
     return () => clearTimeout(debounceRef.current)
   }, [state.imageTransform, state.imageUrl, state.isExtractingPalette, state.templateId, state.aspectRatio, setPalette])
 
@@ -103,7 +139,7 @@ export default function Index() {
         <Text className="upload-desc">
           上传一张照片，提取主色调，生成好看的分享卡片
         </Text>
-        <View className="upload-btn" onClick={handleChooseImage}>
+        <View className="upload-btn" onTap={handleChooseImage}>
           <Text className="upload-btn-text">选择照片</Text>
         </View>
         <Text className="upload-hint">
@@ -116,37 +152,36 @@ export default function Index() {
   return (
     <View className="editor-page">
       <View className="preview-area">
-        {state.isExtractingPalette ? (
-          <View className="extracting">
+        {state.isExtractingPalette && (
+          <View className="extracting-badge">
             <Text className="extracting-text">提取颜色中…</Text>
           </View>
-        ) : (
-          <View className="card-wrapper">
-            <CardComponent
-              imageUrl={state.imageUrl}
-              palette={state.palette}
-              text={state.text}
-              aspectRatio={state.aspectRatio}
-              transform={state.imageTransform}
-              onTransformChange={setTransform}
-            />
-          </View>
         )}
+        <View className="card-wrapper">
+          <CardComponent
+            imageUrl={state.imageUrl}
+            palette={state.palette}
+            text={state.text}
+            aspectRatio={state.aspectRatio}
+            transform={state.imageTransform}
+            onTransformChange={setTransform}
+          />
+        </View>
       </View>
 
       <View className="toolbar">
-        <View onClick={handleChooseImage} style={toolbarBtnStyle}>
+        <View onTap={handleChooseImage} style={toolbarBtnStyle}>
           <Text style={{ fontSize: 22 }}>🖼️</Text>
           <Text style={{ fontSize: 12, color: '#6b7280' }}>换图</Text>
         </View>
         <View className="toolbar-divider" />
-        <View onClick={() => setDrawerVisible(true)} style={toolbarBtnStyle}>
+        <View onTap={() => setDrawerVisible(true)} style={toolbarBtnStyle}>
           <Text style={{ fontSize: 22 }}>⚙️</Text>
           <Text style={{ fontSize: 12, color: '#6b7280' }}>调整</Text>
         </View>
         <View className="toolbar-divider" />
         <View
-          onClick={handleSave}
+          onTap={handleSave}
           style={{ ...toolbarBtnStyle, opacity: state.exportStatus === 'exporting' ? 0.5 : 1 }}
         >
           <Text style={{ fontSize: 22 }}>
