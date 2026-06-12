@@ -23,8 +23,13 @@ export default function Index() {
 
   const tryFillLocationFromExif = async (filePath: string) => {
     const gps = await getExifGPS(filePath)
-    if (!gps) return
-    setText('location', formatGPSCoords(gps.latitude, gps.longitude))
+    if (!gps) {
+      console.log('[index] 无 GPS 信息，地点字段不填写')
+      return
+    }
+    const coords = formatGPSCoords(gps.latitude, gps.longitude)
+    console.log('[index] 设置地点字段:', coords)
+    setText('location', coords)
   }
 
   const handleChooseImage = () => {

@@ -108,25 +108,41 @@ export interface GPSCoords {
  */
 export async function getExifGPS(filePath: string): Promise<GPSCoords | null> {
   try {
+    console.log('[exifGPS] 开始读取文件:', filePath)
     const buffer = await readFileAsBuffer(filePath)
+    console.log('[exifGPS] 文件大小:', buffer.byteLength, 'bytes')
+
     const tiffStart = findExifOffset(buffer)
-    if (tiffStart < 0) return null
+    if (tiffStart < 0) {
+      console.log('[exifGPS] ❌ 未找到 EXIF APP1 segment（可能是截图或微信压缩图）')
+      return null
+    }
+    console.log('[exifGPS] ✅ 找到 EXIF，tiffStart offset:', tiffStart)
 
     const view = new DataView(buffer)
 
     // Determine byte order: "II" = little-endian (Intel), "MM" = big-endian (Motorola)
     const byteOrderMark = readUint16(view, tiffStart, false)
-    if (byteOrderMark !== 0x4949 && byteOrderMark !== 0x4d4d) return null
+    if (byteOrderMark !== 0x4949 && byteOrderMark !== 0x4d4d) {
+      console.log('[exifGPS] ❌ 字节序标记无效:', byteOrderMark.toString(16))
+      return null
+    }
     const le = byteOrderMark === 0x4949
+    console.log('[exifGPS] 字节序:', le ? 'Little-Endian (Intel)' : 'Big-Endian (Motorola)')
 
     // TIFF magic (0x002A)
-    if (readUint16(view, tiffStart + 2, le) !== 0x002a) return null
+    if (readUint16(view, tiffStart + 2, le) !== 0x002a) {
+      console.log('[exifGPS] ❌ TIFF magic number 校验失败')
+      return null
+    }
 
     // Offset to IFD0
     const ifd0Offset = tiffStart + readUint32(view, tiffStart + 4, le)
+    console.log('[exifGPS] IFD0 offset:', ifd0Offset)
 
     // Walk IFD0 to find GPS IFD pointer (tag 0x8825)
     const ifd0Count = readUint16(view, ifd0Offset, le)
+    console.log('[exifGPS] IFD0 entry count:', ifd0Count)
     let gpsIfdOffset = -1
 
     for (let i = 0; i < ifd0Count; i++) {
@@ -134,14 +150,19 @@ export async function getExifGPS(filePath: string): Promise<GPSCoords | null> {
       const tag = readUint16(view, entryOffset, le)
       if (tag === 0x8825) {
         gpsIfdOffset = tiffStart + readUint32(view, entryOffset + 8, le)
+        console.log('[exifGPS] ✅ 找到 GPS IFD tag，gpsIfdOffset:', gpsIfdOffset)
         break
       }
     }
 
-    if (gpsIfdOffset < 0) return null
+    if (gpsIfdOffset < 0) {
+      console.log('[exifGPS] ❌ IFD0 中没有 GPS IFD tag (0x8825)，照片没有 GPS 信息')
+      return null
+    }
 
     // Walk GPS IFD
     const gpsCount = readUint16(view, gpsIfdOffset, le)
+    console.log('[exifGPS] GPS IFD entry count:', gpsCount)
 
     let latRef = ''
     let lngRef = ''
@@ -158,31 +179,45 @@ export async function getExifGPS(filePath: string): Promise<GPSCoords | null> {
       if (tag === 0x0001) {
         // GPSLatitudeRef — ASCII "N" or "S"
         latRef = String.fromCharCode(view.getUint8(valueOrOffset))
+        console.log('[exifGPS] GPSLatitudeRef:', latRef)
       } else if (tag === 0x0002) {
         // GPSLatitude — 3 rationals
         if (type === 5 && count === 3) {
           const dataOffset = tiffStart + readUint32(view, valueOrOffset, le)
           latitude = parseDMS(view, dataOffset, le)
+          console.log('[exifGPS] GPSLatitude (raw decimal):', latitude)
+        } else {
+          console.log('[exifGPS] ⚠️ GPSLatitude type/count 不符预期 type:', type, 'count:', count)
         }
       } else if (tag === 0x0003) {
         // GPSLongitudeRef — ASCII "E" or "W"
         lngRef = String.fromCharCode(view.getUint8(valueOrOffset))
+        console.log('[exifGPS] GPSLongitudeRef:', lngRef)
       } else if (tag === 0x0004) {
         // GPSLongitude — 3 rationals
         if (type === 5 && count === 3) {
           const dataOffset = tiffStart + readUint32(view, valueOrOffset, le)
           longitude = parseDMS(view, dataOffset, le)
+          console.log('[exifGPS] GPSLongitude (raw decimal):', longitude)
+        } else {
+          console.log('[exifGPS] ⚠️ GPSLongitude type/count 不符预期 type:', type, 'count:', count)
         }
       }
     }
 
-    if (latitude < 0 || longitude < 0) return null
+    if (latitude < 0 || longitude < 0) {
+      console.log('[exifGPS] ❌ latitude 或 longitude 解析失败 lat:', latitude, 'lng:', longitude)
+      return null
+    }
 
-    return {
+    const result = {
       latitude: latRef === 'S' ? -latitude : latitude,
       longitude: lngRef === 'W' ? -longitude : longitude,
     }
-  } catch {
+    console.log('[exifGPS] ✅ 解析成功:', result)
+    return result
+  } catch (e) {
+    console.error('[exifGPS] ❌ 异常:', e)
     return null
   }
 }
