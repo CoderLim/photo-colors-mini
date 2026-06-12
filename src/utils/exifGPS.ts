@@ -190,12 +190,19 @@ export async function getExifData(filePath: string): Promise<ExifData> {
     // ── EXIF Sub-IFD (tag 0x8769) → DateTimeOriginal (tag 0x9003) ────────
     const exifIfdEntry = ifd0.find(e => e.tag === 0x8769)
     if (exifIfdEntry) {
-      const exifIfdOffset = tiffStart + u32(view, exifIfdEntry.valueOrOffset, le)
-      console.log('[exifGPS] EXIF Sub-IFD offset:', exifIfdOffset)
+      const rawExifPtr = u32(view, exifIfdEntry.valueOrOffset, le)
+      const exifIfdOffset = tiffStart + rawExifPtr
+      console.log('[exifGPS] EXIF Sub-IFD rawPtr:', rawExifPtr, '→ absolute offset:', exifIfdOffset)
+      // dump first 4 bytes at exifIfdOffset to verify we're reading the right place
+      const hexDump = Array.from({length: 8}, (_, i) => view.getUint8(exifIfdOffset + i).toString(16).padStart(2, '0')).join(' ')
+      console.log('[exifGPS] EXIF Sub-IFD 头部字节 (hex):', hexDump)
       const exifEntries = readIfd(view, exifIfdOffset, le)
+      console.log('[exifGPS] EXIF Sub-IFD entry count:', exifEntries.length)
+      console.log('[exifGPS] EXIF Sub-IFD tags:', exifEntries.map(e => '0x' + e.tag.toString(16)).join(', '))
 
       const dateEntry = exifEntries.find(e => e.tag === 0x9003)  // DateTimeOriginal
-        ?? exifEntries.find(e => e.tag === 0x0132)               // fallback: DateTime
+        ?? exifEntries.find(e => e.tag === 0x9004)               // DateTimeDigitized
+        ?? exifEntries.find(e => e.tag === 0x0132)               // DateTime (IFD0 fallback)
       if (dateEntry) {
         // ASCII string, value stored at offset if count > 4
         const strOffset = dateEntry.count > 4
