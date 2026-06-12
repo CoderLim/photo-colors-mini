@@ -1,6 +1,6 @@
 import Taro from '@tarojs/taro'
 import { getContrastText } from './colorUtils'
-import { buildLocationLine, buildMetaLine, formatDisplayTime } from './cardText'
+import { buildLocationLine, buildMetaLine } from './cardText'
 import {
   EXPORT_DIMENSIONS,
   PREVIEW_LAYOUT,
@@ -133,7 +133,7 @@ async function exportClassic(options: ExportOptions): Promise<string> {
   ctx.fillRect(0, 0, w, metaH)
 
   const locationLine = buildLocationLine(options.text)
-  const timeLine = formatDisplayTime(options.text.date)
+  const timeLine = options.text.date.trim()
   const metaGap = scaleLayoutPx(layout.metaGap, layoutScale)
   const primarySize = scaleLayoutPx(layout.primaryFontSize, layoutScale)
   const secondarySize = scaleLayoutPx(layout.secondaryFontSize, layoutScale)

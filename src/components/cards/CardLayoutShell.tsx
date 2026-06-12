@@ -1,7 +1,7 @@
 import { View, Text } from '@tarojs/components'
 import { ZoomableImage } from '../ZoomableImage'
 import { getContrastText } from '../../utils/colorUtils'
-import { buildLocationLine, formatDisplayTime } from '../../utils/cardText'
+import { buildLocationLine } from '../../utils/cardText'
 import { PREVIEW_LAYOUT } from '../../utils/cardLayout'
 import type { PaletteColor, TextContent, ImageTransform } from '../../types/editor'
 
@@ -23,7 +23,7 @@ export function CardLayoutShell({
   const bgColor = palette[0]?.hex ?? PREVIEW_LAYOUT.classic.defaultBg
   const textColor = getContrastText(bgColor)
   const locationLine = buildLocationLine(text)
-  const timeLine = formatDisplayTime(text.date)
+  const timeLine = text.date.trim()
 
   return (
     <View className="card-layout card-layout--classic">
