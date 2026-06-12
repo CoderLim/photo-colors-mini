@@ -43,7 +43,7 @@ export function EditorHeader() {
         paddingRight: `${headerPaddingRight}px`,
       }}
     >
-      <Text className="editor-header-title">ColorWalk</Text>
+      <Text className="editor-header-title">旅行色卡</Text>
     </View>
   )
 }

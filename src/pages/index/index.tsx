@@ -136,7 +136,7 @@ export default function Index() {
       <View className="upload-page">
         <View className="upload-hero">
           <View className="upload-header">
-            <Text className="upload-title">ColorWalk</Text>
+            <Text className="upload-title">旅行色卡</Text>
             <Text className="upload-subtitle">发现生活的颜色</Text>
           </View>
 
