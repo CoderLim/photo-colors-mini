@@ -105,7 +105,7 @@ export default function Index() {
           setPalette(palette)
         })
         .catch(() => {})
-    }, 500)
+    }, 300)
 
     return () => clearTimeout(debounceRef.current)
   }, [state.imageTransform, state.imageUrl, state.isExtractingPalette, state.templateId, state.aspectRatio, setPalette])
