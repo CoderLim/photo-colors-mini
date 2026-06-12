@@ -37,3 +37,12 @@ export function getContrastText(hex: string): '#000000' | '#ffffff' {
   const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
   return lum > 0.5 ? '#000000' : '#ffffff'
 }
+
+/** 向白色混合，使颜色变浅（amount: 0~1） */
+export function lightenColor(hex: string, amount: number): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  const mix = (c: number) => Math.round(c + (255 - c) * amount)
+  return rgbToHex(mix(r), mix(g), mix(b))
+}

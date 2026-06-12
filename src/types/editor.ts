@@ -16,12 +16,12 @@ export interface TextContent {
 }
 
 export interface ImageTransform {
-  scale: number // [1, 5]，1 = 默认
+  scale: number // [1, 5]，默认 1.2
   x: number // 水平偏移，0 = 居中
   y: number // 垂直偏移，0 = 居中
 }
 
-export const DEFAULT_TRANSFORM: ImageTransform = { scale: 1, x: 0, y: 0 }
+export const DEFAULT_TRANSFORM: ImageTransform = { scale: 1.2, x: 0, y: 0 }
 
 export type ExportStatus = 'idle' | 'exporting' | 'success' | 'error'
 

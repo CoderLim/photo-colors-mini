@@ -1,6 +1,8 @@
 import { View, Text, Image } from '@tarojs/components'
 import { ZoomableImage } from '../ZoomableImage'
 import { ColorSwatch } from '../palette/ColorSwatch'
+import { buildMetaLine } from '../../utils/cardText'
+import { PREVIEW_LAYOUT } from '../../utils/cardLayout'
 import type { PaletteColor, TextContent, AspectRatio, ImageTransform } from '../../types/editor'
 
 interface Props {
@@ -12,43 +14,47 @@ interface Props {
   onTransformChange?: (t: ImageTransform) => void
 }
 
-export function VibeCardPreview({ imageUrl, palette, text, transform, onTransformChange }: Props) {
-  const dominantHex = palette[0]?.hex ?? '#1a1a2e'
-  const meta = [text.location, text.date].filter(Boolean).join(' · ')
+export function VibeCardPreview({
+  imageUrl,
+  palette,
+  text,
+  transform,
+  onTransformChange,
+}: Props) {
+  const dominantHex = palette[0]?.hex ?? PREVIEW_LAYOUT.vibe.defaultBg
+  const meta = buildMetaLine(text)
 
   return (
-    <View style={{ width: '100%', borderRadius: 16, overflow: 'hidden', backgroundColor: dominantHex, boxShadow: '0 8px 32px rgba(0,0,0,0.18)', position: 'relative' }}>
+    <View className="vibe-card" style={{ backgroundColor: dominantHex }}>
       <Image
+        className="vibe-card__blur-bg"
         src={imageUrl}
-        style={{
-          position: 'absolute',
-          width: '125%', height: '125%',
-          top: '-12.5%', left: '-12.5%',
-          opacity: 0.75,
-        }}
         mode="aspectFill"
       />
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)' }} />
-      <View style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '24px 32px' }}>
-        <View style={{ width: '80%', borderRadius: 12, overflow: 'hidden', paddingTop: '80%', position: 'relative' }}>
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-            <ZoomableImage src={imageUrl} transform={transform} onTransformChange={onTransformChange} />
-          </View>
+      <View className="vibe-card__overlay" />
+
+      <View className="vibe-card__content">
+        <View className="vibe-card__photo-wrap">
+          <ZoomableImage
+            src={imageUrl}
+            transform={transform}
+            onTransformChange={onTransformChange}
+          />
         </View>
-        <View style={{ textAlign: 'center' }}>
-          <Text style={{ color: '#fff', fontSize: 16, fontWeight: 700 }}>{text.title || 'My Photo'}</Text>
+
+        <View className="vibe-card__text">
+          <Text className="vibe-card__title">{text.title || 'My Photo'}</Text>
           {text.subtitle ? (
-            <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, display: 'block', marginTop: 2 }}>
-              {text.subtitle}
-            </Text>
+            <Text className="vibe-card__subtitle">{text.subtitle}</Text>
           ) : null}
           {meta ? (
-            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, display: 'block', marginTop: 4 }}>
-              {meta}
-            </Text>
+            <Text className="vibe-card__meta">{meta}</Text>
           ) : null}
         </View>
-        {palette.length > 0 && <ColorSwatch colors={palette} size="md" />}
+
+        {palette.length > 0 && (
+          <ColorSwatch colors={palette} size="md" />
+        )}
       </View>
     </View>
   )

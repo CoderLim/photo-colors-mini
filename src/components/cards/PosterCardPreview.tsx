@@ -1,5 +1,6 @@
 import { View, Text } from '@tarojs/components'
 import { ZoomableImage } from '../ZoomableImage'
+import { buildMetaLine } from '../../utils/cardText'
 import type { PaletteColor, TextContent, AspectRatio, ImageTransform } from '../../types/editor'
 
 interface Props {
@@ -11,35 +12,46 @@ interface Props {
   onTransformChange?: (t: ImageTransform) => void
 }
 
-export function PosterCardPreview({ imageUrl, palette, text, transform, onTransformChange }: Props) {
-  const meta = [text.location, text.date].filter(Boolean).join(' · ')
+export function PosterCardPreview({
+  imageUrl,
+  palette,
+  text,
+  transform,
+  onTransformChange,
+}: Props) {
+  const meta = buildMetaLine(text)
 
   return (
-    <View style={{ width: '100%', borderRadius: 16, overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', position: 'relative' }}>
-      <View style={{ width: '100%', paddingTop: '150%', position: 'relative' }}>
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-          <ZoomableImage src={imageUrl} transform={transform} onTransformChange={onTransformChange} />
-        </View>
+    <View className="poster-card">
+      <View className="poster-card__photo">
+        <ZoomableImage
+          src={imageUrl}
+          transform={transform}
+          onTransformChange={onTransformChange}
+        />
       </View>
-      <View
-        style={{
-          position: 'absolute',
-          top: 0, left: 0, right: 0, bottom: 0,
-          background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.1) 50%, transparent 100%)',
-        }}
-      />
+
+      <View className="poster-card__overlay" />
+
       {palette.length > 0 && (
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 10, display: 'flex', flexDirection: 'row' }}>
-          {palette.map(c => <View key={c.hex} style={{ flex: 1, backgroundColor: c.hex }} />)}
+        <View className="poster-card__palette-bar">
+          {palette.map(c => (
+            <View
+              key={c.hex}
+              className="poster-card__palette-segment"
+              style={{ backgroundColor: c.hex }}
+            />
+          ))}
         </View>
       )}
-      <View style={{ position: 'absolute', bottom: 32, right: 20, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-        <Text style={{ color: '#fff', fontSize: 20, fontWeight: 700, textAlign: 'right' }}>{text.title || 'My Photo'}</Text>
+
+      <View className="poster-card__text">
+        <Text className="poster-card__title">{text.title || 'My Photo'}</Text>
         {text.subtitle ? (
-          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, textAlign: 'right' }}>{text.subtitle}</Text>
+          <Text className="poster-card__subtitle">{text.subtitle}</Text>
         ) : null}
         {meta ? (
-          <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, textAlign: 'right' }}>{meta}</Text>
+          <Text className="poster-card__meta">{meta}</Text>
         ) : null}
       </View>
     </View>

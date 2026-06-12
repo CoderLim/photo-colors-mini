@@ -1,12 +1,16 @@
 import Taro from '@tarojs/taro'
 import { getContrastText } from './colorUtils'
+import { buildLocationLine, buildMetaLine, formatDisplayTime } from './cardText'
+import {
+  EXPORT_DIMENSIONS,
+  PREVIEW_LAYOUT,
+  getLayoutScale,
+  getPhysicalScale,
+  getPreviewCardWidth,
+  scaleLayoutPx,
+  scaleTransform,
+} from './cardLayout'
 import type { PaletteColor, TextContent, AspectRatio, TemplateId, ImageTransform } from '../types/editor'
-
-const DIMENSIONS: Record<AspectRatio, { w: number; h: number }> = {
-  '1:1': { w: 1500, h: 1500 },
-  '3:4': { w: 1500, h: 2000 },
-  '9:16': { w: 1080, h: 1920 },
-}
 
 interface ExportOptions {
   templateId: TemplateId
@@ -15,6 +19,7 @@ interface ExportOptions {
   text: TextContent
   aspectRatio: AspectRatio
   transform: ImageTransform
+  previewWidth?: number
 }
 
 function loadImage(canvas: unknown, src: string): Promise<HTMLImageElement> {
@@ -30,7 +35,7 @@ function drawZoomedImage(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
   x: number, y: number, W: number, H: number,
-  transform: ImageTransform
+  transform: ImageTransform,
 ) {
   const imgAspect = img.width / img.height
   const containerAspect = W / H
@@ -49,6 +54,49 @@ function drawZoomedImage(
   ctx.restore()
 }
 
+function drawLetterSpacedText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  centerX: number,
+  y: number,
+  letterSpacing: number,
+) {
+  const chars = text.toUpperCase().split('')
+  const widths = chars.map(c => ctx.measureText(c).width)
+  const totalWidth = widths.reduce((sum, w) => sum + w, 0) + letterSpacing * Math.max(0, chars.length - 1)
+  let x = centerX - totalWidth / 2
+  for (let i = 0; i < chars.length; i++) {
+    ctx.fillText(chars[i], x, y)
+    x += widths[i] + letterSpacing
+  }
+}
+
+function measureTextBlockHeight(
+  ctx: CanvasRenderingContext2D,
+  text: TextContent,
+  layoutScale: number,
+  layout: typeof PREVIEW_LAYOUT.vibe,
+): number {
+  const textGap = scaleLayoutPx(layout.textGap, layoutScale)
+  const metaMargin = scaleLayoutPx(layout.metaMarginTop, layoutScale)
+  let height = 0
+
+  ctx.font = `700 ${scaleLayoutPx(layout.titleFontSize, layoutScale)}px Arial`
+  height += scaleLayoutPx(layout.titleFontSize, layoutScale) * 1.2
+
+  if (text.subtitle) {
+    height += textGap
+    height += scaleLayoutPx(layout.subtitleFontSize, layoutScale) * 1.2
+  }
+
+  const meta = buildMetaLine(text)
+  if (meta) {
+    height += metaMargin + scaleLayoutPx(layout.metaFontSize, layoutScale) * 1.2
+  }
+
+  return height
+}
+
 function canvasToTempFile(canvas: unknown): Promise<string> {
   return new Promise((resolve, reject) => {
     Taro.canvasToTempFilePath({
@@ -59,131 +107,248 @@ function canvasToTempFile(canvas: unknown): Promise<string> {
   })
 }
 
+function resolvePreviewWidth(previewWidth?: number): number {
+  if (previewWidth && previewWidth > 0) return previewWidth
+  return getPreviewCardWidth(Taro.getWindowInfo().windowWidth)
+}
+
 async function exportClassic(options: ExportOptions): Promise<string> {
-  const { w, h } = DIMENSIONS[options.aspectRatio]
+  const { w, h } = EXPORT_DIMENSIONS[options.aspectRatio]
+  const layout = PREVIEW_LAYOUT.classic
+  const previewWidth = resolvePreviewWidth(options.previewWidth)
+  const physicalScale = getPhysicalScale(w, previewWidth)
+  const layoutScale = getLayoutScale(w, previewWidth)
+  const transform = scaleTransform(options.transform, physicalScale)
+
   const canvas = Taro.createOffscreenCanvas({ type: '2d', width: w, height: h })
   const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
   const img = await loadImage(canvas, options.imageUrl)
 
-  const photoH = Math.round(h * 0.7)
-  const infoH = h - photoH
-  const bgColor = options.palette[0]?.hex ?? '#f5f5f5'
+  const metaH = Math.round(h * layout.metaRatio)
+  const photoH = h - metaH
+  const bgColor = options.palette[0]?.hex ?? layout.defaultBg
   const textColor = getContrastText(bgColor)
 
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(0, 0, w, h)
-
-  ctx.save()
-  ctx.beginPath(); ctx.rect(0, 0, w, photoH); ctx.clip()
-  drawZoomedImage(ctx, img, 0, 0, w, photoH, options.transform)
-  ctx.restore()
-
   ctx.fillStyle = bgColor
-  ctx.fillRect(0, photoH, w, infoH)
+  ctx.fillRect(0, 0, w, metaH)
 
-  const px = 60
-  let y = photoH + 48
+  const locationLine = buildLocationLine(options.text)
+  const timeLine = formatDisplayTime(options.text.date)
+  const metaGap = scaleLayoutPx(layout.metaGap, layoutScale)
+  const primarySize = scaleLayoutPx(layout.primaryFontSize, layoutScale)
+  const secondarySize = scaleLayoutPx(layout.secondaryFontSize, layoutScale)
+  const letterSpacing = scaleLayoutPx(layout.letterSpacingPrimary, layoutScale)
+
+  ctx.textAlign = 'left'
   ctx.fillStyle = textColor
-  ctx.font = '700 48px Arial'
-  ctx.fillText(options.text.title || 'My Photo', px, y)
-  y += 60
-  if (options.text.subtitle) {
-    ctx.globalAlpha = 0.7
-    ctx.font = '400 28px Arial'
-    ctx.fillText(options.text.subtitle, px, y)
+
+  if (locationLine && timeLine) {
+    const blockH = primarySize * 1.4 + metaGap + secondarySize * 1.2
+    const startY = (metaH - blockH) / 2
+    ctx.font = `600 ${primarySize}px Arial`
+    drawLetterSpacedText(ctx, locationLine, w / 2, startY + primarySize, letterSpacing)
+    ctx.globalAlpha = 0.85
+    ctx.font = `400 ${secondarySize}px Arial`
+    ctx.textAlign = 'center'
+    ctx.fillText(timeLine, w / 2, startY + primarySize * 1.4 + metaGap + secondarySize)
+    ctx.globalAlpha = 1
+  } else if (locationLine) {
+    ctx.font = `600 ${primarySize}px Arial`
+    drawLetterSpacedText(ctx, locationLine, w / 2, metaH / 2 + primarySize * 0.35, letterSpacing)
+  } else if (timeLine) {
+    ctx.globalAlpha = 0.85
+    ctx.font = `400 ${secondarySize}px Arial`
+    ctx.textAlign = 'center'
+    ctx.fillText(timeLine, w / 2, metaH / 2 + secondarySize * 0.35)
     ctx.globalAlpha = 1
   }
 
-  if (options.palette.length > 0) {
-    const swatchY = h - 48 - 34
-    let sx = px
-    options.palette.slice(0, 5).forEach(c => {
-      ctx.fillStyle = c.hex
-      ctx.beginPath(); ctx.arc(sx + 17, swatchY + 17, 17, 0, Math.PI * 2); ctx.fill()
-      sx += 17 * 2 + 18
-    })
-  }
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(0, metaH, w, photoH)
+  ctx.clip()
+  drawZoomedImage(ctx, img, 0, metaH, w, photoH, transform)
+  ctx.restore()
 
   return canvasToTempFile(canvas)
 }
 
 async function exportPoster(options: ExportOptions): Promise<string> {
-  const { w, h } = DIMENSIONS[options.aspectRatio]
+  const { w, h } = EXPORT_DIMENSIONS[options.aspectRatio]
+  const layout = PREVIEW_LAYOUT.poster
+  const previewWidth = resolvePreviewWidth(options.previewWidth)
+  const physicalScale = getPhysicalScale(w, previewWidth)
+  const layoutScale = getLayoutScale(w, previewWidth)
+  const transform = scaleTransform(options.transform, physicalScale)
+
   const canvas = Taro.createOffscreenCanvas({ type: '2d', width: w, height: h })
   const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
   const img = await loadImage(canvas, options.imageUrl)
 
-  drawZoomedImage(ctx, img, 0, 0, w, h, options.transform)
+  drawZoomedImage(ctx, img, 0, 0, w, h, transform)
 
-  const grad = ctx.createLinearGradient(0, h * 0.5, 0, h)
-  grad.addColorStop(0, 'rgba(0,0,0,0)')
-  grad.addColorStop(1, 'rgba(0,0,0,0.75)')
+  const grad = ctx.createLinearGradient(0, h, 0, 0)
+  grad.addColorStop(0, 'rgba(0,0,0,0.75)')
+  grad.addColorStop(0.5, 'rgba(0,0,0,0.1)')
+  grad.addColorStop(1, 'transparent')
   ctx.fillStyle = grad
   ctx.fillRect(0, 0, w, h)
 
+  const barH = scaleLayoutPx(layout.barHeight, layoutScale)
   if (options.palette.length > 0) {
-    const barH = 16
     const bW = w / options.palette.length
     options.palette.forEach((c, i) => {
-      ctx.fillStyle = c.hex; ctx.fillRect(i * bW, h - barH, bW, barH)
+      ctx.fillStyle = c.hex
+      ctx.fillRect(i * bW, h - barH, bW, barH)
     })
   }
 
+  const textRight = scaleLayoutPx(layout.textRight, layoutScale)
+  const textGap = scaleLayoutPx(layout.textGap, layoutScale)
+  const titleSize = scaleLayoutPx(layout.titleFontSize, layoutScale)
+  const subtitleSize = scaleLayoutPx(layout.subtitleFontSize, layoutScale)
+  const metaSize = scaleLayoutPx(layout.metaFontSize, layoutScale)
+  const textBottom = options.palette.length > 0
+    ? h - barH - scaleLayoutPx(layout.textBottom, layoutScale)
+    : h - scaleLayoutPx(layout.textBottom, layoutScale)
+
+  const meta = buildMetaLine(options.text)
   ctx.textAlign = 'right'
   ctx.fillStyle = '#ffffff'
-  ctx.font = '700 72px Arial'
-  ctx.fillText(options.text.title || 'My Photo', w - 60, h - 96)
-  if (options.text.subtitle) {
-    ctx.globalAlpha = 0.8; ctx.font = '400 36px Arial'
-    ctx.fillText(options.text.subtitle, w - 60, h - 40)
+
+  let ty = textBottom
+  if (meta) {
+    ctx.globalAlpha = 0.6
+    ctx.font = `400 ${metaSize}px Arial`
+    ctx.fillText(meta, w - textRight, ty)
+    ty -= metaSize * 1.2 + textGap
     ctx.globalAlpha = 1
   }
+  if (options.text.subtitle) {
+    ctx.globalAlpha = 0.8
+    ctx.font = `400 ${subtitleSize}px Arial`
+    ctx.fillText(options.text.subtitle, w - textRight, ty)
+    ty -= subtitleSize * 1.2 + textGap
+    ctx.globalAlpha = 1
+  }
+  ctx.font = `700 ${titleSize}px Arial`
+  ctx.fillText(options.text.title || 'My Photo', w - textRight, ty)
 
   return canvasToTempFile(canvas)
 }
 
 async function exportVibe(options: ExportOptions): Promise<string> {
-  const { w, h } = DIMENSIONS[options.aspectRatio]
+  const { w, h } = EXPORT_DIMENSIONS[options.aspectRatio]
+  const layout = PREVIEW_LAYOUT.vibe
+  const previewWidth = resolvePreviewWidth(options.previewWidth)
+  const physicalScale = getPhysicalScale(w, previewWidth)
+  const layoutScale = getLayoutScale(w, previewWidth)
+  const transform = scaleTransform(options.transform, physicalScale)
+
   const canvas = Taro.createOffscreenCanvas({ type: '2d', width: w, height: h })
   const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
   const img = await loadImage(canvas, options.imageUrl)
 
-  const dominantHex = options.palette[0]?.hex ?? '#1a1a2e'
+  const dominantHex = options.palette[0]?.hex ?? layout.defaultBg
+  const padX = scaleLayoutPx(layout.paddingX, layoutScale)
+  const contentGap = scaleLayoutPx(layout.contentGap, layoutScale)
+  const innerW = w - padX * 2
+  const imgSize = Math.round(innerW * layout.photoWidthRatio)
+  const photoBorder = scaleLayoutPx(layout.photoBorder, layoutScale)
+  const swatchSize = scaleLayoutPx(layout.swatchSize, layoutScale)
+  const swatchGap = scaleLayoutPx(layout.swatchGap, layoutScale)
 
-  ctx.fillStyle = dominantHex; ctx.fillRect(0, 0, w, h)
+  ctx.fillStyle = dominantHex
+  ctx.fillRect(0, 0, w, h)
 
-  ctx.globalAlpha = 0.7
-  ctx.filter = 'blur(20px)'
-  ctx.drawImage(img, -w * 0.1, -h * 0.1, w * 1.2, h * 1.2)
+  const blurOffset = (layout.blurScale - 1) / 2
+  ctx.globalAlpha = layout.blurOpacity
+  ctx.filter = `blur(${scaleLayoutPx(layout.blurPx, layoutScale)}px)`
+  ctx.drawImage(
+    img,
+    -w * blurOffset,
+    -h * blurOffset,
+    w * layout.blurScale,
+    h * layout.blurScale,
+  )
   ctx.filter = 'none'
   ctx.globalAlpha = 1
 
-  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, 0, w, h)
+  ctx.fillStyle = 'rgba(0,0,0,0.5)'
+  ctx.fillRect(0, 0, w, h)
 
-  const imgSize = Math.round(w * 0.75)
-  const imgX = (w - imgSize) / 2
-  const imgY = Math.round(h * 0.12)
+  const textBlockH = measureTextBlockHeight(ctx, options.text, layoutScale, layout)
+  const swatchH = options.palette.length > 0 ? swatchSize : 0
+  const contentH = imgSize + contentGap + textBlockH + (swatchH ? contentGap + swatchH : 0)
+  const contentTop = Math.round((h - contentH) / 2)
+  const imgX = Math.round((w - imgSize) / 2)
+  const imgY = contentTop
+
   ctx.save()
-  ctx.beginPath(); ctx.rect(imgX, imgY, imgSize, imgSize); ctx.clip()
-  drawZoomedImage(ctx, img, imgX, imgY, imgSize, imgSize, options.transform)
+  ctx.shadowColor = `rgba(0, 0, 0, ${layout.photoShadowAlpha})`
+  ctx.shadowBlur = scaleLayoutPx(layout.photoShadowBlur, layoutScale)
+  ctx.shadowOffsetY = scaleLayoutPx(layout.photoShadowOffsetY, layoutScale)
+  ctx.fillStyle = 'rgba(0,0,0,0.01)'
+  ctx.fillRect(imgX, imgY, imgSize, imgSize)
   ctx.restore()
 
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(imgX, imgY, imgSize, imgSize)
+  ctx.clip()
+  drawZoomedImage(ctx, img, imgX, imgY, imgSize, imgSize, transform)
+  ctx.restore()
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)'
+  ctx.lineWidth = photoBorder
+  ctx.strokeRect(imgX, imgY, imgSize, imgSize)
+
   ctx.textAlign = 'center'
-  let ty = imgY + imgSize + 60
-  ctx.fillStyle = '#ffffff'; ctx.font = '700 52px Arial'
-  ctx.fillText(options.text.title || 'My Photo', w / 2, ty); ty += 64
+  let ty = imgY + imgSize + contentGap
+  const titleSize = scaleLayoutPx(layout.titleFontSize, layoutScale)
+  const subtitleSize = scaleLayoutPx(layout.subtitleFontSize, layoutScale)
+  const metaSize = scaleLayoutPx(layout.metaFontSize, layoutScale)
+  const textGap = scaleLayoutPx(layout.textGap, layoutScale)
+  const metaMargin = scaleLayoutPx(layout.metaMarginTop, layoutScale)
+
+  ctx.fillStyle = '#ffffff'
+  ctx.font = `700 ${titleSize}px Arial`
+  ctx.fillText(options.text.title || 'My Photo', w / 2, ty + titleSize)
+  ty += titleSize * 1.2
+
   if (options.text.subtitle) {
-    ctx.globalAlpha = 0.8; ctx.font = '400 32px Arial'
-    ctx.fillText(options.text.subtitle, w / 2, ty); ty += 48; ctx.globalAlpha = 1
+    ctx.globalAlpha = 0.8
+    ctx.font = `400 ${subtitleSize}px Arial`
+    ctx.fillText(options.text.subtitle, w / 2, ty + subtitleSize)
+    ty += subtitleSize * 1.2 + textGap
+    ctx.globalAlpha = 1
+  }
+
+  const meta = buildMetaLine(options.text)
+  if (meta) {
+    ty += metaMargin
+    ctx.globalAlpha = 0.6
+    ctx.font = `400 ${metaSize}px Arial`
+    ctx.fillText(meta, w / 2, ty + metaSize)
+    ty += metaSize * 1.2
+    ctx.globalAlpha = 1
   }
 
   if (options.palette.length > 0) {
-    let sx = (w - (options.palette.length * 52 - 16)) / 2
+    ty += contentGap
+    const swatchCount = Math.min(options.palette.length, 5)
+    const rowW = swatchCount * swatchSize + (swatchCount - 1) * swatchGap
+    let sx = (w - rowW) / 2 + swatchSize / 2
+    const cy = ty + swatchSize / 2
     options.palette.slice(0, 5).forEach(c => {
       ctx.fillStyle = c.hex
-      ctx.beginPath(); ctx.arc(sx + 18, ty + 18, 18, 0, Math.PI * 2); ctx.fill()
-      ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 2; ctx.stroke()
-      sx += 52
+      ctx.beginPath()
+      ctx.arc(sx, cy, swatchSize / 2, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)'
+      ctx.lineWidth = Math.max(1, scaleLayoutPx(1.5, layoutScale))
+      ctx.stroke()
+      sx += swatchSize + swatchGap
     })
   }
 

@@ -16,8 +16,7 @@ const FIELDS: { key: keyof TextContent; label: string; placeholder: string }[] =
 export function TextEditor({ text, onChange }: Props) {
   return (
     <View style={{ marginTop: 20 }}>
-      <Text style={{ fontSize: 12, color: '#999', textTransform: 'uppercase', letterSpacing: 1 }}>文字</Text>
-      <View style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <View style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {FIELDS.map(f => (
           <View key={f.key}>
             <Text style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>{f.label}</Text>

@@ -11,7 +11,7 @@ const initialState: EditorState = {
   imageUrl: null,
   palette: [],
   templateId: 'classic',
-  aspectRatio: '9:16',
+  aspectRatio: '3:4',
   text: {
     title: 'My Photo',
     subtitle: 'A moment in time',

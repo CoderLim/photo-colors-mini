@@ -2,7 +2,7 @@
   "miniprogramRoot": "dist/",
   "projectname": "photo-colors-miniprogram",
   "description": "Photo Palette Card 微信小程序",
-  "appid": "touristappid",
+  "appid": "wxd20cc6d616321c93",
   "setting": {
     "urlCheck": true,
     "es6": false,
@@ -38,10 +38,22 @@
     "minifyWXSS": true,
     "disableUseStrict": false,
     "ignoreUploadUnusedFiles": true,
-    "minifyWXML": true
+    "minifyWXML": true,
+    "compileWorklet": false,
+    "localPlugins": false,
+    "useCompilerPlugins": false,
+    "condition": false,
+    "swc": false,
+    "disableSWC": true
   },
   "compileType": "miniprogram",
   "libVersion": "3.3.5",
   "srcMiniprogramRoot": "dist/",
-  "condition": {}
+  "condition": {},
+  "simulatorPluginLibVersion": {},
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  },
+  "editorSetting": {}
 }

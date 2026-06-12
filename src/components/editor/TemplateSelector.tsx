@@ -2,9 +2,9 @@ import { View, Text } from '@tarojs/components'
 import type { TemplateId } from '../../types/editor'
 
 const TEMPLATES = [
-  { id: 'classic' as TemplateId, label: 'Classic' },
-  { id: 'music' as TemplateId, label: 'Vibe' },
-  { id: 'poster' as TemplateId, label: 'Poster' },
+  { id: 'classic' as TemplateId, label: '经典' },
+  { id: 'music' as TemplateId, label: '氛围' },
+  { id: 'poster' as TemplateId, label: '海报' },
 ]
 
 interface Props {
@@ -20,7 +20,7 @@ export function TemplateSelector({ selected, onChange }: Props) {
         {TEMPLATES.map(t => (
           <View
             key={t.id}
-            onClick={() => onChange(t.id)}
+            onTap={() => onChange(t.id)}
             style={{
               flex: 1, padding: '8px 0', textAlign: 'center', borderRadius: 8,
               backgroundColor: selected === t.id ? '#6d28d9' : '#f3f4f6',
