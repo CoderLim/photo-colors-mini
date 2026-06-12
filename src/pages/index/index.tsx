@@ -6,7 +6,6 @@ import { extractPaletteFromRegion } from '../../utils/extractPalette'
 import { exportAndSave } from '../../utils/canvasExport'
 import { getCardImageAspect } from '../../utils/templateConfig'
 import { lightenColor } from '../../utils/colorUtils'
-import { getExifData, formatGPSCoords } from '../../utils/exifGPS'
 import { ClassicCardPreview } from '../../components/cards/ClassicCardPreview'
 import { VibeCardPreview } from '../../components/cards/VibeCardPreview'
 import { PosterCardPreview } from '../../components/cards/PosterCardPreview'
@@ -21,17 +20,26 @@ export default function Index() {
   const extractSeqRef = useRef(0)
   const { cardWidth, cardHeight } = useCardDimensions(state.aspectRatio)
 
-  const tryFillFromExif = async (filePath: string) => {
-    const exif = await getExifData(filePath)
-    if (exif.gps) {
-      const coords = formatGPSCoords(exif.gps.latitude, exif.gps.longitude)
-      console.log('[index] 设置地点字段:', coords)
-      setText('location', coords)
-    }
-    if (exif.date) {
-      console.log('[index] 设置日期字段:', exif.date)
-      setText('date', exif.date)
-    }
+  const fillLocationAndDate = () => {
+    // 填充当前日期
+    const now = new Date()
+    const dateStr = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`
+    setText('date', dateStr)
+
+    // 获取当前位置坐标
+    Taro.getLocation({
+      type: 'gcj02',
+      success: res => {
+        const lat = Math.abs(res.latitude).toFixed(2)
+        const lng = Math.abs(res.longitude).toFixed(2)
+        const latDir = res.latitude >= 0 ? 'N' : 'S'
+        const lngDir = res.longitude >= 0 ? 'E' : 'W'
+        setText('location', `${lat}°${latDir}, ${lng}°${lngDir}`)
+      },
+      fail: () => {
+        // 用户拒绝授权或获取失败，静默跳过
+      },
+    })
   }
 
   const handleChooseImage = () => {
@@ -41,7 +49,6 @@ export default function Index() {
     Taro.chooseMedia({
       count: 1,
       mediaType: ['image'],
-      sizeType: ['original'],
       sourceType: ['album', 'camera'],
       success: res => {
         const file = res.tempFiles?.[0]
@@ -50,7 +57,7 @@ export default function Index() {
           return
         }
         setImage(file.tempFilePath)
-        tryFillFromExif(file.tempFilePath)
+        fillLocationAndDate()
       },
       fail: err => {
         const cancelled = err?.errMsg?.includes('cancel')
