@@ -6,7 +6,7 @@ import { extractPaletteFromRegion } from '../../utils/extractPalette'
 import { exportAndSave } from '../../utils/canvasExport'
 import { getCardImageAspect } from '../../utils/templateConfig'
 import { lightenColor } from '../../utils/colorUtils'
-import { getExifGPS, formatGPSCoords } from '../../utils/exifGPS'
+import { getExifData, formatGPSCoords } from '../../utils/exifGPS'
 import { ClassicCardPreview } from '../../components/cards/ClassicCardPreview'
 import { VibeCardPreview } from '../../components/cards/VibeCardPreview'
 import { PosterCardPreview } from '../../components/cards/PosterCardPreview'
@@ -21,15 +21,17 @@ export default function Index() {
   const extractSeqRef = useRef(0)
   const { cardWidth, cardHeight } = useCardDimensions(state.aspectRatio)
 
-  const tryFillLocationFromExif = async (filePath: string) => {
-    const gps = await getExifGPS(filePath)
-    if (!gps) {
-      console.log('[index] 无 GPS 信息，地点字段不填写')
-      return
+  const tryFillFromExif = async (filePath: string) => {
+    const exif = await getExifData(filePath)
+    if (exif.gps) {
+      const coords = formatGPSCoords(exif.gps.latitude, exif.gps.longitude)
+      console.log('[index] 设置地点字段:', coords)
+      setText('location', coords)
     }
-    const coords = formatGPSCoords(gps.latitude, gps.longitude)
-    console.log('[index] 设置地点字段:', coords)
-    setText('location', coords)
+    if (exif.date) {
+      console.log('[index] 设置日期字段:', exif.date)
+      setText('date', exif.date)
+    }
   }
 
   const handleChooseImage = () => {
@@ -48,7 +50,7 @@ export default function Index() {
           return
         }
         setImage(file.tempFilePath)
-        tryFillLocationFromExif(file.tempFilePath)
+        tryFillFromExif(file.tempFilePath)
       },
       fail: err => {
         const cancelled = err?.errMsg?.includes('cancel')
