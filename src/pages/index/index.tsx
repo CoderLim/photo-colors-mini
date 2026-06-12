@@ -6,6 +6,7 @@ import { extractPaletteFromRegion } from '../../utils/extractPalette'
 import { exportAndSave } from '../../utils/canvasExport'
 import { getCardImageAspect } from '../../utils/templateConfig'
 import { lightenColor } from '../../utils/colorUtils'
+import { getExifGPS, formatGPSCoords } from '../../utils/exifGPS'
 import { ClassicCardPreview } from '../../components/cards/ClassicCardPreview'
 import { VibeCardPreview } from '../../components/cards/VibeCardPreview'
 import { PosterCardPreview } from '../../components/cards/PosterCardPreview'
@@ -20,6 +21,12 @@ export default function Index() {
   const extractSeqRef = useRef(0)
   const { cardWidth, cardHeight } = useCardDimensions(state.aspectRatio)
 
+  const tryFillLocationFromExif = async (filePath: string) => {
+    const gps = await getExifGPS(filePath)
+    if (!gps) return
+    setText('location', formatGPSCoords(gps.latitude, gps.longitude))
+  }
+
   const handleChooseImage = () => {
     if (isChoosingRef.current) return
     isChoosingRef.current = true
@@ -27,6 +34,7 @@ export default function Index() {
     Taro.chooseMedia({
       count: 1,
       mediaType: ['image'],
+      sizeType: ['original'],
       sourceType: ['album', 'camera'],
       success: res => {
         const file = res.tempFiles?.[0]
@@ -35,6 +43,7 @@ export default function Index() {
           return
         }
         setImage(file.tempFilePath)
+        tryFillLocationFromExif(file.tempFilePath)
       },
       fail: err => {
         const cancelled = err?.errMsg?.includes('cancel')
